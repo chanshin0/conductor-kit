@@ -59,6 +59,33 @@ export async function pullFastForward(cwd = process.cwd()): Promise<void> {
   await execa('git', ['pull', '--ff-only'], { cwd });
 }
 
+export async function addAll(cwd = process.cwd()): Promise<void> {
+  await execa('git', ['add', '-A'], { cwd });
+}
+
+export async function commit(message: string, cwd = process.cwd()): Promise<void> {
+  await execa('git', ['commit', '-m', message], { cwd });
+}
+
+export async function pushHead(
+  remote = 'origin',
+  cwd = process.cwd(),
+): Promise<void> {
+  await execa('git', ['push', '-u', remote, 'HEAD'], { cwd });
+}
+
+/** `git diff --name-only <ref>...HEAD` — returns a list of changed files. */
+export async function diffNames(ref: string, cwd = process.cwd()): Promise<string[]> {
+  const { stdout } = await execa('git', ['diff', '--name-only', `${ref}...HEAD`], { cwd });
+  return stdout.split('\n').map((l) => l.trim()).filter(Boolean);
+}
+
+/** Short diff stat (e.g. for commit body / MR body). */
+export async function diffStat(ref: string, cwd = process.cwd()): Promise<string> {
+  const { stdout } = await execa('git', ['diff', '--stat', `${ref}...HEAD`], { cwd });
+  return stdout;
+}
+
 /** Return `true` if `mergedBranch` is reachable from `into` (i.e. already merged). */
 export async function isMerged(
   mergedBranch: string,

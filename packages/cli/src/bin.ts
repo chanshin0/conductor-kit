@@ -4,6 +4,7 @@ import { whereCommand } from './commands/where.js';
 import { initCommand } from './commands/init.js';
 import { pickCommand } from './commands/pick.js';
 import { landCommand } from './commands/land.js';
+import { shipCommand } from './commands/ship.js';
 
 const main = defineCommand({
   meta: {
@@ -15,6 +16,7 @@ const main = defineCommand({
     init: initCommand,
     where: whereCommand,
     pick: pickCommand,
+    ship: shipCommand,
     land: landCommand,
   },
 });
