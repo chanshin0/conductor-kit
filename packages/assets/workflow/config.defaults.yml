@@ -1,0 +1,91 @@
+# conductor-kit — repo-agnostic defaults
+# Each host repo overrides via `.conductor/workflow.yml` (deep-merged).
+# The CLI loads this first at the start of every command.
+
+jira:
+  base_url: '<YOUR_JIRA_BASE_URL>' # e.g. https://your-org.atlassian.net
+  transitions:
+    start:
+      from: 'TO DO'
+      to: 'IN PROGRESS'
+    resolve:
+      from: 'IN PROGRESS'
+      to: 'RESOLVE'
+
+branch:
+  # Jira issue type → commit/branch prefix
+  # Must match your commitlint type-enum (override per repo if different).
+  prefix_map:
+    Bug: fix
+    Task: feat
+    Story: feat
+    Improvement: refactor
+    Documentation: docs
+    Epic: feat
+    Sub-task: feat
+  slug:
+    max_words: 5
+    separator: '-'
+
+commit:
+  format: '{type}: {issue_key} {subject}'
+  types:
+    - feat
+    - fix
+    - docs
+    - style
+    - refactor
+    - test
+    - chore
+    - ci
+    - build
+    - revert
+
+mr:
+  title_format: '{type}: {issue_key} {subject}'
+  # Template is resolved from @conductor-kit/assets by the CLI at runtime.
+  template_path: 'workflow/templates/mr-template.md'
+  target_branch: main
+
+gitlab:
+  # Leave both blank to parse from `git remote get-url origin`
+  # (scheme://host/path). Used for prefill-URL fallback when `glab` is unavailable.
+  base_url: ''
+  project_path: ''
+
+plan:
+  template_path: 'workflow/templates/plan-template.md'
+  work_context_path: 'workflow/templates/work-context.md'
+  work_dir: .work
+  escape_hatch: 'Trivial fix — no plan needed'
+
+validation:
+  # Override per repo. Defaults assume a JS/TS project with pnpm.
+  static:
+    - pnpm run lint
+    - pnpm run type-check
+    - pnpm run test
+  ui_change_globs:
+    - src/views/**
+    - src/components/**
+    - src/assets/**
+    - src/locales/**
+  ui_verify_gif: '.work/{issue_key}-verify-ui.gif'
+
+context:
+  # Host repo's explicit conventions doc. Loaded at /pick Phase 0.
+  conventions_path: .conductor/CONVENTIONS.md
+
+recap:
+  jira_comment_template: 'workflow/templates/recap-comment.md'
+  page_template: 'workflow/templates/recap-page.md'
+  default_confluence: false
+
+draft:
+  issue_template: 'workflow/templates/draft-issue.md'
+
+authorship_footer:
+  # Rendered into every MR body / Jira comment / Recap page.
+  # Placeholders: {COMMAND} {AGENT} {CLI_VERSION} {USER}
+  format: 'Generated via `conductor {COMMAND}` — agent {AGENT} · conductor-kit v{CLI_VERSION} · user {USER}'
+  fallback_agent: 'unknown-agent'

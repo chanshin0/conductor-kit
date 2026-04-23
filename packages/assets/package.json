@@ -1,0 +1,40 @@
+{
+  "name": "@conductor-kit/assets",
+  "version": "0.0.0",
+  "description": "Static assets for conductor-kit: workflow templates, config defaults, and reference docs.",
+  "license": "MIT",
+  "author": "Dongchan Shin <dong2chan3a@gmail.com>",
+  "homepage": "https://github.com/chanshin0/conductor-kit/tree/main/packages/assets",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chanshin0/conductor-kit.git",
+    "directory": "packages/assets"
+  },
+  "type": "module",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js"
+    },
+    "./package.json": "./package.json",
+    "./workflow/*": "./workflow/*",
+    "./references/*": "./references/*"
+  },
+  "files": [
+    "workflow",
+    "references",
+    "index.js",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "build": "echo 'assets are static, nothing to build'",
+    "typecheck": "echo 'no ts'",
+    "test": "echo 'no tests'",
+    "lint": "echo 'no lint'"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

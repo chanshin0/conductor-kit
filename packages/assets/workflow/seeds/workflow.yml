@@ -1,0 +1,19 @@
+# Host-repo override for conductor-kit defaults.
+# Anything set here is deep-merged on top of @conductor-kit/assets/workflow/config.defaults.yml.
+# Leave keys out to inherit defaults.
+
+project_key: '<YOUR_PROJECT_KEY>' # e.g. ACME
+
+jira:
+  base_url: '<YOUR_JIRA_BASE_URL>' # e.g. https://your-org.atlassian.net
+
+gitlab:
+  base_url: ''
+  project_path: ''
+
+# Override validation if your repo doesn't use pnpm:
+# validation:
+#   static:
+#     - npm run lint
+#     - npm run type-check
+#     - npm test

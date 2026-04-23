@@ -1,0 +1,38 @@
+{
+  "name": "conductor-install",
+  "version": "0.0.0",
+  "description": "Install conductor-kit agent adapters (Claude / Codex / Cursor) into a host repository.",
+  "license": "MIT",
+  "author": "Dongchan Shin <dong2chan3a@gmail.com>",
+  "homepage": "https://github.com/chanshin0/conductor-kit/tree/main/apps/installer",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chanshin0/conductor-kit.git",
+    "directory": "apps/installer"
+  },
+  "type": "module",
+  "bin": {
+    "conductor-install": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'no tests yet'",
+    "lint": "echo 'TODO: eslint'"
+  },
+  "dependencies": {
+    "citty": "^0.1.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

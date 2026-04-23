@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest an idea or improvement
+labels: ['enhancement']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What pain or limitation motivates this?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What would you like to see? Sketch API / CLI surface if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - Core
+        - CLI
+        - Agent adapter (Claude)
+        - Agent adapter (Codex)
+        - Agent adapter (Cursor)
+        - Installer
+        - Docs / Examples
+    validations:
+      required: true

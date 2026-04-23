@@ -1,0 +1,43 @@
+{
+  "name": "@conductor-kit/cli",
+  "version": "0.0.0",
+  "description": "The `conductor` command — a neutral CLI that drives team workflow automation across multiple AI agents.",
+  "license": "MIT",
+  "author": "Dongchan Shin <dong2chan3a@gmail.com>",
+  "homepage": "https://github.com/chanshin0/conductor-kit/tree/main/packages/cli",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chanshin0/conductor-kit.git",
+    "directory": "packages/cli"
+  },
+  "type": "module",
+  "bin": {
+    "conductor": "./dist/bin.js",
+    "cnd": "./dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "lint": "echo 'TODO: eslint'"
+  },
+  "dependencies": {
+    "@conductor-kit/core": "workspace:*",
+    "@conductor-kit/assets": "workspace:*",
+    "citty": "^0.1.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

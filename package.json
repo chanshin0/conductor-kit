@@ -1,0 +1,35 @@
+{
+  "name": "conductor-kit",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Team workflow automation that conducts multiple AI agents (Claude Code · Codex CLI · Cursor) through a single shared ritual.",
+  "license": "MIT",
+  "author": "Dongchan Shin <dong2chan3a@gmail.com> (https://github.com/chanshin0)",
+  "homepage": "https://github.com/chanshin0/conductor-kit",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chanshin0/conductor-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/chanshin0/conductor-kit/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.11.0",
+  "scripts": {
+    "build": "pnpm -r --filter=./packages/* --filter=./apps/* build",
+    "test": "pnpm -r --filter=./packages/* test",
+    "typecheck": "pnpm -r --filter=./packages/* --filter=./apps/* typecheck",
+    "lint": "pnpm -r --filter=./packages/* --filter=./apps/* lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,yml,yaml}\"",
+    "changeset": "changeset",
+    "release": "pnpm build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.0",
+    "prettier": "^3.3.0",
+    "typescript": "^5.5.0"
+  }
+}
