@@ -2,7 +2,7 @@ import { defineCommand } from 'citty';
 import { writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { globalArgs } from '../global-args.js';
-import { emitHandoff, emitJson } from '../io.js';
+import { emitHandoff, emitJson, promptOne } from '../io.js';
 import {
   loadConfig,
   work,
@@ -13,6 +13,8 @@ import {
   createMr,
   GitLabFatalError,
   filesTouchUI,
+  parsePlanScope,
+  findOutOfScope,
   resolveAuthorship,
   detectGitUser,
   type MrOutcome,
@@ -170,8 +172,67 @@ export const shipCommand = defineCommand({
       return;
     }
 
-    // --- Phase 1.5: UI change detection ---
+    // --- Phase 1.4: Deviation detection (plan 영향 범위 vs git diff) ---
+    // If the plan listed specific files/globs and the diff includes files that
+    // match none of them, ask the user what to do. Recording scope drift loudly
+    // is the whole point of having a plan — silent drift makes retros useless.
     const changedFiles = dryRun ? [] : await git.diffNames(`origin/${targetBranch}`, cwd);
+    const planScope = parsePlanScope(workRaw);
+    const deviationFiles = findOutOfScope(changedFiles, planScope);
+    const ctx = { json: jsonMode, auto: Boolean(args.auto) };
+
+    if (deviationFiles.length > 0 && !dryRun) {
+      const answer = await promptOne(
+        {
+          id: 'deviation',
+          prompt:
+            `Files changed outside the plan's 영향 범위 (${deviationFiles.length}): ` +
+            `${deviationFiles.slice(0, 5).join(', ')}${deviationFiles.length > 5 ? ', ...' : ''}. ` +
+            `How to proceed?`,
+          choices: ['extend-plan', 'revert', 'ignore'],
+          default: 'extend-plan',
+        },
+        ctx,
+      );
+
+      if (answer === 'revert') {
+        const msg =
+          `Plan deviation — reverting. Unstage / restore the out-of-scope files then re-run \`conductor ship\`. ` +
+          `Files: ${deviationFiles.join(', ')}`;
+        if (jsonMode) {
+          emitHandoff({
+            status: 'blocked',
+            phase: 'ship/deviation-revert',
+            data: { issue_key: issueKey, out_of_scope: deviationFiles },
+            handoff: { message: msg },
+          });
+        } else {
+          console.error(msg);
+        }
+        process.exitCode = 1;
+        return;
+      }
+
+      if (answer === 'extend-plan') {
+        // Append the unplanned files into the "영향 범위" section so the plan
+        // reflects reality. Keeps the audit trail honest without asking the
+        // user to hand-edit the work file mid-ship.
+        const addendum =
+          `\n<!-- appended by conductor ship --deviation:extend-plan -->\n` +
+          deviationFiles.map((f) => `- ${f} — scope extension`).join('\n') +
+          '\n';
+        const patched = workRaw.replace(
+          /(##\s*영향 범위\s*\n[\s\S]*?)(?=\n##\s|\n$)/,
+          (_, sec) => sec.trimEnd() + addendum,
+        );
+        if (patched !== workRaw) {
+          await work.writeWork(cwd, issueKey, patched);
+        }
+      }
+      // 'ignore' falls through — deviation is logged in ship output only.
+    }
+
+    // --- Phase 1.5: UI change detection ---
     const uiGlobs = cfg.ui?.change_globs;
     const uiChanged = filesTouchUI(changedFiles, uiGlobs);
     const uiSkipReason = args['skip-ui-check'] as string | undefined;
@@ -222,13 +283,33 @@ export const shipCommand = defineCommand({
     const goalLine = planGoalOneLiner(workRaw);
     const jiraBaseUrl = cfg.jira?.base_url ?? '<YOUR_JIRA_BASE_URL>';
 
-    const commitMsg = await renderTemplateFile('commit-message', {
+    const commitMsgDraft = await renderTemplateFile('commit-message', {
       TYPE: commitType,
       ISSUE_KEY: issueKey,
       KOREAN_SUBJECT: goalLine || '변경 적용',
       OPTIONAL_BODY: '',
       JIRA_BASE_URL: jiraBaseUrl,
     });
+
+    // Commit-message approval: in --json mode the adapter can edit the draft
+    // by piping a replacement string back on stdin. In TTY mode, the user can
+    // accept (Enter) or type a replacement single line (multi-line edits must
+    // use --dry-run to preview + shell redirection or --auto to bypass).
+    let commitMsg = commitMsgDraft;
+    if (!dryRun) {
+      const approved = await promptOne(
+        {
+          id: 'commit-message-approval',
+          prompt:
+            'Approve commit message (press Enter to accept the draft, or paste a replacement):',
+          default: commitMsgDraft,
+        },
+        ctx,
+      );
+      if (approved && approved !== commitMsgDraft) {
+        commitMsg = approved;
+      }
+    }
 
     if (dryRun) {
       if (jsonMode) {
@@ -312,11 +393,16 @@ export const shipCommand = defineCommand({
       }
     }
 
-    // Flip work status to `shipped`.
+    // Flip work status to `shipped`. Re-read the file here because earlier
+    // phases (extend-plan) may have appended to it — using the captured
+    // workRaw would clobber those additions.
     if (!dryRun) {
-      const patched = workRaw.replace(/status:\s*[a-z-]+/i, 'status: shipped');
-      if (patched !== workRaw) {
-        await work.writeWork(cwd, issueKey, patched);
+      const fresh = await work.readWork(cwd, issueKey);
+      if (fresh) {
+        const patched = fresh.raw.replace(/status:\s*[a-z-]+/i, 'status: shipped');
+        if (patched !== fresh.raw) {
+          await work.writeWork(cwd, issueKey, patched);
+        }
       }
     }
 

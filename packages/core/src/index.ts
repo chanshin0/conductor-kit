@@ -34,3 +34,4 @@ export type { TemplateName, PlaceholderValues } from './templates.js';
 export { runValidation } from './validation.js';
 export type { ValidationCheck, ValidationReport } from './validation.js';
 export { filesTouchUI, DEFAULT_UI_GLOBS } from './uiDetection.js';
+export { getH2Section, parsePlanScope, findOutOfScope } from './planSection.js';

@@ -8,6 +8,18 @@ export interface BranchNameInput {
   separator?: string;
 }
 
+/**
+ * Default execa options for every `git` call in this module.
+ *
+ * `stdin: 'ignore'` is the important bit: conductor ships a JSON protocol
+ * over its own stdin, and some git subcommands (notably `git commit` under
+ * hooks that run pagers, or `git rev-parse` in corner cases) can end up
+ * draining the parent process's stdin if it's inherited. Ignoring stdin for
+ * every git spawn keeps the parent's stdin intact for the promptOne /
+ * readJsonLine flow.
+ */
+const GIT_EXECA = { stdin: 'ignore' } as const;
+
 /** Lower-case, strip non-[a-z0-9], keep hyphens. */
 export function slugify(subject: string, maxWords = 5, separator = '-'): string {
   return subject
@@ -25,12 +37,12 @@ export function buildBranchName(input: BranchNameInput): string {
 }
 
 export async function currentBranch(cwd = process.cwd()): Promise<string> {
-  const { stdout } = await execa('git', ['branch', '--show-current'], { cwd });
+  const { stdout } = await execa('git', ['branch', '--show-current'], { cwd, ...GIT_EXECA });
   return stdout.trim();
 }
 
 export async function isClean(cwd = process.cwd()): Promise<boolean> {
-  const { stdout } = await execa('git', ['status', '--porcelain'], { cwd });
+  const { stdout } = await execa('git', ['status', '--porcelain'], { cwd, ...GIT_EXECA });
   return stdout.trim().length === 0;
 }
 
@@ -40,7 +52,7 @@ export async function checkoutBranch(
   { create = true }: { create?: boolean } = {},
 ): Promise<void> {
   const args = create ? ['checkout', '-b', branch] : ['checkout', branch];
-  await execa('git', args, { cwd });
+  await execa('git', args, { cwd, ...GIT_EXECA });
 }
 
 export async function deleteBranch(
@@ -48,41 +60,47 @@ export async function deleteBranch(
   cwd = process.cwd(),
   { force = false }: { force?: boolean } = {},
 ): Promise<void> {
-  await execa('git', ['branch', force ? '-D' : '-d', branch], { cwd });
+  await execa('git', ['branch', force ? '-D' : '-d', branch], { cwd, ...GIT_EXECA });
 }
 
 export async function fetchRemote(remote = 'origin', cwd = process.cwd()): Promise<void> {
-  await execa('git', ['fetch', remote], { cwd });
+  await execa('git', ['fetch', remote], { cwd, ...GIT_EXECA });
 }
 
 export async function pullFastForward(cwd = process.cwd()): Promise<void> {
-  await execa('git', ['pull', '--ff-only'], { cwd });
+  await execa('git', ['pull', '--ff-only'], { cwd, ...GIT_EXECA });
 }
 
 export async function addAll(cwd = process.cwd()): Promise<void> {
-  await execa('git', ['add', '-A'], { cwd });
+  await execa('git', ['add', '-A'], { cwd, ...GIT_EXECA });
 }
 
 export async function commit(message: string, cwd = process.cwd()): Promise<void> {
-  await execa('git', ['commit', '-m', message], { cwd });
+  await execa('git', ['commit', '-m', message], { cwd, ...GIT_EXECA });
 }
 
 export async function pushHead(
   remote = 'origin',
   cwd = process.cwd(),
 ): Promise<void> {
-  await execa('git', ['push', '-u', remote, 'HEAD'], { cwd });
+  await execa('git', ['push', '-u', remote, 'HEAD'], { cwd, ...GIT_EXECA });
 }
 
 /** `git diff --name-only <ref>...HEAD` — returns a list of changed files. */
 export async function diffNames(ref: string, cwd = process.cwd()): Promise<string[]> {
-  const { stdout } = await execa('git', ['diff', '--name-only', `${ref}...HEAD`], { cwd });
+  const { stdout } = await execa('git', ['diff', '--name-only', `${ref}...HEAD`], {
+    cwd,
+    ...GIT_EXECA,
+  });
   return stdout.split('\n').map((l) => l.trim()).filter(Boolean);
 }
 
 /** Short diff stat (e.g. for commit body / MR body). */
 export async function diffStat(ref: string, cwd = process.cwd()): Promise<string> {
-  const { stdout } = await execa('git', ['diff', '--stat', `${ref}...HEAD`], { cwd });
+  const { stdout } = await execa('git', ['diff', '--stat', `${ref}...HEAD`], {
+    cwd,
+    ...GIT_EXECA,
+  });
   return stdout;
 }
 
@@ -93,7 +111,10 @@ export async function isMerged(
   cwd = process.cwd(),
 ): Promise<boolean> {
   try {
-    const { stdout } = await execa('git', ['branch', '--merged', into], { cwd });
+    const { stdout } = await execa('git', ['branch', '--merged', into], {
+      cwd,
+      ...GIT_EXECA,
+    });
     return stdout
       .split('\n')
       .map((l) => l.replace(/^\*?\s+/, '').trim())

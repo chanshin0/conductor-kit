@@ -47,7 +47,13 @@ export async function runValidation(
 async function runOne(command: string, cwd: string): Promise<ValidationCheck> {
   const started = Date.now();
   try {
-    const { stdout, stderr } = await execa('sh', ['-c', command], { cwd, reject: true });
+    // stdin: 'ignore' keeps user-land commands from draining the parent's
+    // stdin — the CLI uses it for its JSON question/answer protocol.
+    const { stdout, stderr } = await execa('sh', ['-c', command], {
+      cwd,
+      reject: true,
+      stdin: 'ignore',
+    });
     return {
       command,
       exitCode: 0,

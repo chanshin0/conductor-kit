@@ -32,11 +32,22 @@ export function emitHandoff(payload: HandoffPayload): void {
   emitJson(payload);
 }
 
-/** Read a single JSON line from stdin and parse it. Returns null on EOF. */
+/**
+ * Read a single JSON line from stdin and parse it. Returns null on EOF.
+ *
+ * Some earlier CLI phases (validation child processes, etc.) can leave
+ * process.stdin in a paused / already-ended state depending on the parent
+ * shell. `resume()` is a no-op on an already-flowing stream and on TTY
+ * stdin; it matters when stdin is a pipe that went quiet while the parent
+ * was awaiting unrelated I/O.
+ */
 export function readJsonLine<T = unknown>(): Promise<T | null> {
   return new Promise((resolve, reject) => {
     const rl = createInterface({ input: process.stdin });
+    let done = false;
     rl.once('line', (line) => {
+      if (done) return;
+      done = true;
       rl.close();
       try {
         resolve(JSON.parse(line) as T);
@@ -44,7 +55,12 @@ export function readJsonLine<T = unknown>(): Promise<T | null> {
         reject(err);
       }
     });
-    rl.once('close', () => resolve(null));
+    rl.once('close', () => {
+      if (done) return;
+      done = true;
+      resolve(null);
+    });
+    process.stdin.resume();
   });
 }
 
