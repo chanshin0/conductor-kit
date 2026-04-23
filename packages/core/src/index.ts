@@ -16,3 +16,20 @@ export { AcliMissingError, JiraApiError, JIRA_EXIT } from './jira.js';
 export type { JiraIssue } from './jira.js';
 export { renderPickWorkFile, pickCommitType } from './pick.js';
 export type { RenderPickWorkInput } from './pick.js';
+export {
+  createMr,
+  parseGitRemote,
+  buildPrefillUrl,
+  GitLabFatalError,
+  MR_EXIT,
+} from './gitlab.js';
+export type { MrOutcome, CreateMrInput } from './gitlab.js';
+export {
+  renderTemplate,
+  loadTemplate,
+  renderTemplateFile,
+  findRemainingPlaceholders,
+} from './templates.js';
+export type { TemplateName, PlaceholderValues } from './templates.js';
+export { runValidation } from './validation.js';
+export type { ValidationCheck, ValidationReport } from './validation.js';
