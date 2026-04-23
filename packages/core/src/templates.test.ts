@@ -28,13 +28,22 @@ describe('renderTemplate', () => {
 });
 
 describe('findRemainingPlaceholders', () => {
-  it('collects unique uppercase placeholders in sorted order', () => {
-    const s = '{MR_URL} {ISSUE_KEY} {MR_URL} {AGENT}';
-    expect(findRemainingPlaceholders(s)).toEqual(['AGENT', 'ISSUE_KEY', 'MR_URL']);
+  it('collects unique identifier placeholders in sorted order (upper and lower)', () => {
+    const s = '{MR_URL} {ISSUE_KEY} {mr_url} {MR_URL} {AGENT}';
+    expect(findRemainingPlaceholders(s)).toEqual([
+      'AGENT',
+      'ISSUE_KEY',
+      'MR_URL',
+      'mr_url',
+    ]);
   });
 
-  it('ignores lowercase or mixed-case slots', () => {
-    expect(findRemainingPlaceholders('{issue_key} {MR_URL}')).toEqual(['MR_URL']);
+  it('ignores comment-style slots with non-identifier characters', () => {
+    // Templates ship visual guides like `{background — 발견 경위·맥락}` — those
+    // are for human readers, not for the renderer to fill.
+    expect(
+      findRemainingPlaceholders('{background — 발견 경위·맥락} {ok_name}'),
+    ).toEqual(['ok_name']);
   });
 
   it('returns an empty list when none remain', () => {

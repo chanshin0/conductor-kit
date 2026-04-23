@@ -5,6 +5,8 @@ import { initCommand } from './commands/init.js';
 import { pickCommand } from './commands/pick.js';
 import { landCommand } from './commands/land.js';
 import { shipCommand } from './commands/ship.js';
+import { recapCommand } from './commands/recap.js';
+import { draftCommand } from './commands/draft.js';
 
 const main = defineCommand({
   meta: {
@@ -18,6 +20,8 @@ const main = defineCommand({
     pick: pickCommand,
     ship: shipCommand,
     land: landCommand,
+    recap: recapCommand,
+    draft: draftCommand,
   },
 });
 

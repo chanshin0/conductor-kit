@@ -54,12 +54,18 @@ export async function renderTemplateFile(
 /**
  * Return the list of placeholders *still unrendered* in a string.
  *
- * Useful for the `ship` command to assert that every required slot in a
- * rendered template has been filled before the commit / MR is created.
+ * Matches both `{UPPER_SNAKE}` and `{lower_snake}` forms — conductor's
+ * templates mix the two (headers like `{COMMAND}` / `{AGENT}` alongside
+ * content slots like `{mr_url}` / `{goal_one_liner}`). Identifier-style
+ * only: `{background — 발견 경위·맥락}` and similar comment-style slots
+ * are intentionally ignored so templates can keep visual guides.
+ *
+ * Useful for `ship` / `recap` to assert that every required slot has been
+ * filled before posting to Jira / creating the MR.
  */
 export function findRemainingPlaceholders(content: string): string[] {
   const set = new Set<string>();
-  const re = /\{([A-Z_][A-Z0-9_]*)\}/g;
+  const re = /\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(content)) !== null) {
     set.add(match[1]!);

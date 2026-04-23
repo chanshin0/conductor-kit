@@ -67,6 +67,35 @@ export async function comment(issueKey: string, bodyOrPath: string): Promise<voi
   await runAcli(['jira', 'workitem', 'comment', 'create', issueKey, '--body', bodyOrPath]);
 }
 
+export interface JiraSearchHit {
+  key: string;
+  summary: string;
+  status: string;
+}
+
+/** `acli jira workitem search --jql '<jql>' --json` — returns a lean hit list. */
+export async function search(
+  jql: string,
+  opts: { maxResults?: number } = {},
+): Promise<JiraSearchHit[]> {
+  const stdout = await runAcli(['jira', 'workitem', 'search', '--jql', jql, '--json']);
+  const parsed = JSON.parse(stdout) as {
+    issues?: Array<{
+      key?: string;
+      fields?: { summary?: string; status?: { name?: string } };
+    }>;
+  };
+  const max = opts.maxResults ?? 20;
+  return (parsed.issues ?? [])
+    .slice(0, max)
+    .map((i) => ({
+      key: i.key ?? '',
+      summary: i.fields?.summary ?? '',
+      status: i.fields?.status?.name ?? '',
+    }))
+    .filter((h) => h.key);
+}
+
 /** Map acli's JSON shape onto our lean JiraIssue struct. */
 export function normalizeIssue(raw: Record<string, unknown>, fallbackKey: string): JiraIssue {
   const fields = (raw.fields as Record<string, unknown> | undefined) ?? {};
