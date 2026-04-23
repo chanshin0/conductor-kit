@@ -7,6 +7,7 @@ import { landCommand } from './commands/land.js';
 import { shipCommand } from './commands/ship.js';
 import { recapCommand } from './commands/recap.js';
 import { draftCommand } from './commands/draft.js';
+import { tuneCommand } from './commands/tune.js';
 
 const main = defineCommand({
   meta: {
@@ -22,6 +23,7 @@ const main = defineCommand({
     land: landCommand,
     recap: recapCommand,
     draft: draftCommand,
+    tune: tuneCommand,
   },
 });
 
