@@ -33,3 +33,45 @@ export async function isClean(cwd = process.cwd()): Promise<boolean> {
   const { stdout } = await execa('git', ['status', '--porcelain'], { cwd });
   return stdout.trim().length === 0;
 }
+
+export async function checkoutBranch(
+  branch: string,
+  cwd = process.cwd(),
+  { create = true }: { create?: boolean } = {},
+): Promise<void> {
+  const args = create ? ['checkout', '-b', branch] : ['checkout', branch];
+  await execa('git', args, { cwd });
+}
+
+export async function deleteBranch(
+  branch: string,
+  cwd = process.cwd(),
+  { force = false }: { force?: boolean } = {},
+): Promise<void> {
+  await execa('git', ['branch', force ? '-D' : '-d', branch], { cwd });
+}
+
+export async function fetchRemote(remote = 'origin', cwd = process.cwd()): Promise<void> {
+  await execa('git', ['fetch', remote], { cwd });
+}
+
+export async function pullFastForward(cwd = process.cwd()): Promise<void> {
+  await execa('git', ['pull', '--ff-only'], { cwd });
+}
+
+/** Return `true` if `mergedBranch` is reachable from `into` (i.e. already merged). */
+export async function isMerged(
+  mergedBranch: string,
+  into: string,
+  cwd = process.cwd(),
+): Promise<boolean> {
+  try {
+    const { stdout } = await execa('git', ['branch', '--merged', into], { cwd });
+    return stdout
+      .split('\n')
+      .map((l) => l.replace(/^\*?\s+/, '').trim())
+      .includes(mergedBranch);
+  } catch {
+    return false;
+  }
+}

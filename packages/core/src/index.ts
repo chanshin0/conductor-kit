@@ -11,3 +11,8 @@ export {
 export type { AuthorshipInputs, ResolvedAuthorship } from './authorship.js';
 export { scaffoldConductorDir, applyWorkflowPlaceholders } from './scaffold.js';
 export type { ScaffoldOptions, ScaffoldResult, ScaffoldFileAction } from './scaffold.js';
+export * as jira from './jira.js';
+export { AcliMissingError, JiraApiError, JIRA_EXIT } from './jira.js';
+export type { JiraIssue } from './jira.js';
+export { renderPickWorkFile, pickCommitType } from './pick.js';
+export type { RenderPickWorkInput } from './pick.js';
