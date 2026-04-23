@@ -1,0 +1,64 @@
+<!-- conductor-kit begin -->
+## conductor-kit workflow
+
+This repository uses [conductor-kit](https://github.com/chanshin0/conductor-kit)
+as the shared team workflow. One CLI (`conductor`), three agent adapters
+(Claude Code / Codex CLI / Cursor). Core rule: **the CLI is deterministic;
+agents do conversation + code editing, not orchestration.**
+
+### Core contract
+
+- Read `.conductor/CONVENTIONS.md` before editing any code. It is the single
+  source of truth for branch / commit / validation rules in this repo.
+- Session state lives in `.work/{ISSUE_KEY}.md`. Do not delete or rewrite
+  status lines by hand — let `conductor` manage them.
+- Every workflow step is a `conductor <cmd>` invocation. See
+  `.codex/prompts/conductor-*.md` for the per-command playbooks.
+
+### Plan-first gate (EnterPlanMode replacement)
+
+Codex does not structurally block edits, so the convention is enforced by
+the CLI + this prompt:
+
+1. `conductor pick <KEY>` creates `.work/{KEY}.md` with `status: plan-draft`.
+2. You (the agent) draft the plan, surface grey areas to the user, record
+   their answers. **Do not call any Edit/Write tool on source files yet.**
+3. The user says "approved". Run `conductor pick <KEY> --approve` — the
+   status flips to `plan-approved`.
+4. Only now may you edit code. `conductor ship` refuses to run unless
+   status is `plan-approved` or `implementing`.
+
+### Commands
+
+| Command | Purpose |
+|---|---|
+| `conductor init` | Scaffold `.conductor/` in this repo (once). |
+| `conductor where` | Snapshot current state, suggest next action. |
+| `conductor pick <KEY>` | Jira → branch → transition → plan draft. |
+| `conductor ship` | Validate → commit → push → MR → Jira ship comment. |
+| `conductor land [<KEY>]` | After merge: Jira RESOLVE + cleanup. |
+| `conductor recap [<KEY>]` | Post-merge Jira result comment. |
+| `conductor draft "<desc>"` | Structured Jira issue draft. |
+| `conductor tune "<feedback>"` | Route feedback to the right workflow file. |
+| `conductor autopilot <KEY>` | Unattended pick → implement → ship loop. |
+
+All are also available as `.codex/prompts/conductor-*.md` files.
+
+### Authorship footer
+
+All outputs (MR body, Jira comment, recap) end with a single line:
+
+```
+Generated via `conductor {COMMAND}` — agent Codex · conductor-kit v{CLI_VERSION} · user {USER}
+```
+
+The `Codex` label is hardcoded in every prompt file under `.codex/prompts/`.
+Edit the `--agent "..."` value there if you want per-model attribution.
+
+### Red lines
+
+- Never `git commit --amend` or `git push --force`.
+- Never `--no-verify` on commits.
+- Never edit source files before `conductor pick <KEY> --approve`.
+- Never re-run a failing check in a retry loop — surface the error and stop.
+<!-- conductor-kit end -->
