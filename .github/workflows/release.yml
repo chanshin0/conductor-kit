@@ -1,8 +1,9 @@
 name: Release
 
+# Manual-only until NPM_TOKEN is configured and the project is ready to publish.
+# Flip to `on: push: branches: [main]` when Changesets-driven publishing goes live.
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: release-${{ github.ref }}
