@@ -1,0 +1,50 @@
+---
+description: Load when the task involves branch naming, commit messages, MR/Jira wording, or validation flow — i.e. anything that touches `conductor` outputs
+---
+
+This rule supplies the conventions enforced across every `conductor` output
+(branch / commit / MR body / Jira comment / recap). The canonical source is
+`.conductor/CONVENTIONS.md`; this rule is a **summary** for quick reference.
+
+## Branch & commit
+
+- Branch: `{type}/{ISSUE_KEY}-{kebab-slug}` where `type` is derived from
+  issue type via `branch.prefix_map` in `.conductor/workflow.yml`
+  (e.g. Bug → `fix`, Task / Story → `feat`, Improvement → `refactor`,
+  Documentation → `docs`).
+- Commit subject: `{type}: {ISSUE_KEY} <한국어 주제>`. One-line body
+  optional. The CLI renders this from `commit-message.md` — do not invent
+  your own format.
+
+## Validation
+
+- Static checks: whatever `workflow.yml > validation.static` lists.
+  Typically `pnpm run lint`, `pnpm run type-check`, and `vitest related`
+  against changed files (not the whole suite — CI covers global regression).
+- Run them via the CLI, not by hand, so results land in `.work/{KEY}.md`.
+
+## MR & Jira wording
+
+- MR title: `{type}: {ISSUE_KEY} <subject>` (Jira key included for auto-link).
+- MR body: rendered from `mr-template.md`. Required sections: 📝 변경 요약,
+  📂 변경 파일, ✅ 자동 검증, 🧪 테스트 방법, 📸 스크린샷, 👤 Authorship.
+- Jira ship comment: `jira-comment-ship.md`. Always includes MR URL and
+  authorship footer.
+
+## Authorship footer
+
+All artifacts end with:
+
+```
+Generated via `conductor {COMMAND}` — agent Cursor · conductor-kit v{CLI_VERSION} · user {USER}
+```
+
+The `Cursor` label is hardcoded in `.cursor/commands/conductor-*.md`.
+
+## Files you should not touch directly
+
+- `.work/{KEY}.md` status lines — CLI-owned.
+- Generated type files (e.g. `src/types/api/APIs.ts` if it exists) —
+  regenerated from OpenAPI.
+- `node_modules/`, `pnpm-lock.yaml`, `package.json` dependency fields —
+  discuss before edits.

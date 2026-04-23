@@ -1,0 +1,28 @@
+---
+description: UI checklist guidance — auto-loads when View/Component files are in context
+globs:
+  - src/views/**
+  - src/components/**
+  - src/assets/**
+  - src/locales/**
+---
+
+You are editing UI surface area. Before running `conductor ship`:
+
+1. Update the "브라우저 체크리스트" section in `.work/{KEY}.md` to reflect
+   the screens / interactions you changed. A checklist with zero items is
+   treated as missing — ship will refuse.
+2. Cursor has no browser automation tool. To satisfy Phase 1.5 UI
+   verification you must choose one of:
+   - `--ui-verify <gif-path>` — you or the user performs a manual run and
+     attaches the GIF.
+   - `--skip-ui-check "<reason>"` — requires an explicit reason; the MR
+     body records it.
+   - Install `@conductor-kit/ui-verify` (Playwright) — the CLI drives a
+     headless browser and produces the GIF itself.
+3. Never hard-code strings in a View/Component. Use the project's i18n
+   hook (if `src/i18n/**` exists, it is almost certainly required). Scan
+   the existing file before adding text.
+4. Prefer re-using existing components over adding new ones. Before
+   creating a new `*.vue` / `*.tsx` under `src/components/`, grep for
+   something similar.
