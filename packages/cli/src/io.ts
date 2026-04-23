@@ -32,6 +32,41 @@ export function emitHandoff(payload: HandoffPayload): void {
   emitJson(payload);
 }
 
+export interface SignalPayload {
+  type: 'signal';
+  step: string;
+  [k: string]: unknown;
+}
+
+/**
+ * Hand control to the adapter for a phase the CLI cannot run itself
+ * (e.g. the agent-driven implement step inside `autopilot`). The adapter
+ * reads this line, does its work, then pipes an AckPayload back on stdin.
+ */
+export function emitSignal(step: string, data: Record<string, unknown> = {}): void {
+  emitJson({ type: 'signal', step, ...data } satisfies SignalPayload);
+}
+
+export interface AckPayload {
+  id: string;
+  [k: string]: unknown;
+}
+
+/**
+ * Wait for the adapter's ack line (e.g. `{"id":"implement-done"}`). Throws on
+ * EOF or on id mismatch. Keep the protocol single-shot — one signal, one ack.
+ */
+export async function awaitAck(expectedId: string): Promise<AckPayload> {
+  const ack = await readJsonLine<AckPayload>();
+  if (!ack) {
+    throw new Error(`No ack received on stdin for signal "${expectedId}"`);
+  }
+  if (ack.id !== expectedId) {
+    throw new Error(`Mismatched ack id: expected "${expectedId}", got "${ack.id}"`);
+  }
+  return ack;
+}
+
 /**
  * Read a single JSON line from stdin and parse it. Returns null on EOF.
  *

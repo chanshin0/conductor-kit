@@ -8,6 +8,7 @@ import { shipCommand } from './commands/ship.js';
 import { recapCommand } from './commands/recap.js';
 import { draftCommand } from './commands/draft.js';
 import { tuneCommand } from './commands/tune.js';
+import { autopilotCommand } from './commands/autopilot.js';
 
 const main = defineCommand({
   meta: {
@@ -24,6 +25,7 @@ const main = defineCommand({
     recap: recapCommand,
     draft: draftCommand,
     tune: tuneCommand,
+    autopilot: autopilotCommand,
   },
 });
 
