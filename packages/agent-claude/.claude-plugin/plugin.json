@@ -1,0 +1,8 @@
+{
+  "name": "conductor",
+  "description": "Conductor-kit adapter for Claude Code — thin wrappers that delegate to the `conductor` CLI and handle Claude-specific hooks (EnterPlanMode, Claude in Chrome).",
+  "version": "0.0.0",
+  "author": {
+    "name": "chanshin0"
+  }
+}
