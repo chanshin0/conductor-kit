@@ -32,11 +32,17 @@ jobs:
           cache: pnpm
 
       # npm trusted-publishing via OIDC landed in npm v11.5.1. Node 22 ships
-      # ~npm 10, which fails ENEEDAUTH when NPM_TOKEN is unset. `npm@latest`
-      # self-upgrade runs into a MODULE_NOT_FOUND on `promise-retry` on the
-      # tooled-cache Node; pin to a known-good release line instead.
+      # ~npm 10, which fails ENEEDAUTH when NPM_TOKEN is unset. In-place
+      # `npm install -g npm@...` hits MODULE_NOT_FOUND on `promise-retry`
+      # because the old npm's arborist sees its own replacement mid-swap —
+      # install into a scratch prefix and put it first on PATH instead.
       - name: Install npm 11 (trusted-publishing support)
-        run: npm install -g npm@11
+        run: |
+          mkdir -p /tmp/npm11
+          npm install --prefix /tmp/npm11 npm@11
+          echo "/tmp/npm11/node_modules/.bin" >> "$GITHUB_PATH"
+      - name: Show npm version
+        run: npm --version
 
       - name: Install
         run: pnpm install --frozen-lockfile
