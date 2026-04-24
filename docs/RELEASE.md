@@ -74,6 +74,47 @@ As a bonus, publishes tied to a trusted publisher appear on npm with a
 signed provenance attestation — consumers can verify the package came
 from this repo + workflow run.
 
+#### Known-bad state (2026-04-24)
+
+Trusted publisher was configured on all four packages and `NPM_TOKEN`
+was deleted from the repo secrets, but the `workflow_dispatch` run still
+fails with `E404` on the final registry `PUT`:
+
+```
+🦋 info  Publishing "@conductor-kit/cli" at "0.2.0"
+npm notice publish Signed provenance statement with source and build information from GitHub Actions
+npm notice publish Provenance statement published to transparency log: ...
+🦋 error  an error occurred while publishing @conductor-kit/cli:
+         E404 Not Found - PUT https://registry.npmjs.org/@conductor-kit%2fcli - Not found
+```
+
+- `changesets/action` logs `"No NPM_TOKEN found, but OIDC is available -
+  using npm trusted publishing"` — confirming the OIDC environment is
+  reachable.
+- Provenance signing lands in sigstore, proving the OIDC claim is valid
+  on GitHub's end.
+- But the `PUT` carries no auth header — pnpm/npm didn't complete the
+  OIDC-for-token exchange with the registry, so npm returned `404` (its
+  obfuscated `403` for unauthenticated writes).
+
+Tried in this order, all returned the same `404`:
+
+1. pnpm 10.11 + `NPM_CONFIG_PROVENANCE=true` — signed, no exchange.
+2. pnpm 10.11 + `npm@11` installed into `/tmp/npm11` ahead of PATH.
+3. pnpm 10.33.2 (which advertises native OIDC exchange) + same npm 11.
+
+pnpm 10.33 did not exchange the OIDC token for a publish credential in
+practice, despite the release notes suggesting it should. Either the
+trusted-publisher claim on the npm side doesn't match what pnpm sends
+(subject format / environment value), or pnpm's exchange path has a
+condition we don't satisfy.
+
+For now, v0.2.0 / v0.1.1 shipped via the manual WebAuthn path below.
+Revisit CI auto-publish once npm / pnpm tooling settles — good signals
+are an npm CLI with first-class `--publish-via-oidc` support, or pnpm
+release notes that explicitly mention trusted-publisher exchange (not
+just provenance signing).
+
 ### Fallback: per-package 2FA for publish
 
 If trusted publisher setup isn't an option, the per-package `Require
