@@ -31,6 +31,13 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           cache: pnpm
 
+      # npm trusted-publishing via OIDC was added in npm v11.5.1. The version
+      # bundled with Node 22 is ~10.x, which fails ENEEDAUTH when NPM_TOKEN
+      # is unset even though OIDC would otherwise work. Upgrade globally so
+      # pnpm's underlying `npm publish` picks up the newer CLI.
+      - name: Upgrade npm (for trusted-publishing support)
+        run: npm install -g npm@latest
+
       - name: Install
         run: pnpm install --frozen-lockfile
 
@@ -46,11 +53,10 @@ jobs:
           title: 'chore: release packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          # OIDC provenance: npm attaches a signed attestation tying this
-          # release to the workflow run. Requires `id-token: write` above and
-          # works alongside NPM_TOKEN. If a trusted publisher is configured
-          # for the package on npmjs.com, OIDC alone can replace NPM_TOKEN —
-          # see docs/RELEASE.md for the one-time setup.
+          # OIDC trusted publishing: npm CLI (v11.5.1+) exchanges the
+          # GitHub Actions OIDC token for a short-lived npm auth token,
+          # provided each package has a matching trusted publisher configured
+          # on npmjs.com — see docs/RELEASE.md. NPM_TOKEN must be absent for
+          # the OIDC path to trigger; otherwise the CLI uses the token first
+          # and skips OIDC. Provenance is attached automatically.
           NPM_CONFIG_PROVENANCE: 'true'
