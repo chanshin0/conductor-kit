@@ -23,7 +23,10 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.11.0
+          # 10.33+ handles OIDC trusted-publishing over GitHub Actions'
+          # id-token flow natively; earlier 10.x signs provenance but
+          # doesn't exchange the OIDC token for a publish credential.
+          version: 10.33.2
 
       - uses: actions/setup-node@v4
         with:
