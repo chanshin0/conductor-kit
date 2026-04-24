@@ -4,6 +4,7 @@ import { awaitAck, emitHandoff, emitSignal } from '../io.js';
 import { loadConfig, work } from '@conductor-kit/core';
 import { pickCommand } from './pick.js';
 import { shipCommand } from './ship.js';
+import { draftCommand } from './draft.js';
 
 type ConfigLike = {
   project_key?: string;
@@ -26,14 +27,17 @@ function parseStopAt(raw: string | undefined): StopAt {
 /**
  * `conductor autopilot` — single-issue orchestrator.
  *
- * Flow: pick → (signal → adapter implements → ack) → pick --approve → ship.
- * The signal/ack protocol is the seam: the CLI cannot edit source code
- * itself, so it hands control to the agent for the implement phase.
+ * Flow: [optional draft-post] → pick → (signal implement → ack) → pick --approve → ship.
  *
- * v1 scope: single issue only. No --parallel, no free-form prompt path.
- * `--ralph` promotes the global `--auto` flag so pick/ship take their prompt
- * defaults (plan-approval + commit-message approval skipped). Other safety
- * gates (deviation, UI verify, validation) are NOT bypassed.
+ * Positional arg is either:
+ *   • a Jira issue key (e.g. `ACME-42`) — skip straight to pick
+ *   • free-form text — render a draft via `conductor draft`, emit a
+ *     `draft-post` signal, await `{"id":"draft-posted","issue_key":"..."}`,
+ *     then continue with that key.
+ *
+ * v2 scope: single issue, optional free-form bootstrap. `--parallel` stays
+ * adapter-layer (the CLI cannot coordinate multiple child signals on one
+ * stdout) so it is still a no-op at this layer.
  */
 export const autopilotCommand = defineCommand({
   meta: {
@@ -45,7 +49,8 @@ export const autopilotCommand = defineCommand({
     key: {
       type: 'positional',
       required: true,
-      description: 'Jira issue key (e.g. ACME-42). Free-form prompt not yet supported.',
+      description:
+        'Jira issue key (e.g. ACME-42) OR free-form description (runs draft + awaits posted key)',
     },
     'stop-at': {
       type: 'string',
@@ -75,18 +80,18 @@ export const autopilotCommand = defineCommand({
       throw new Error('--ralph requires --json mode (signal protocol needs a JSON stdin adapter).');
     }
 
-    const issueKey = String(args.key);
-    if (!isIssueKey(issueKey)) {
-      throw new Error(
-        `Invalid issue key "${issueKey}". Free-form prompt is not supported in autopilot v1 — ` +
-          `run \`conductor draft\` first to create the issue, then pass the returned key.`,
-      );
-    }
-
-    // Surface config early so misconfigured repos fail before pick spends IO.
+    // Surface config early so misconfigured repos fail before any IO.
     await (loadConfig({ cwd }) as Promise<ConfigLike>);
 
     const auto = Boolean(args.auto) || ralph;
+    const rawKey = String(args.key);
+    const issueKey = isIssueKey(rawKey)
+      ? rawKey
+      : await bootstrapFromFreeform(rawKey, args, {
+          cwd,
+          jsonMode,
+          ralph,
+        });
 
     // --- Phase A: pick (issue + branch + work-file draft) ---
     await pickCommand.run!({
@@ -226,4 +231,62 @@ function passThroughGlobals(parent: AnyArgs): AnyArgs {
   if (parent.cwd !== undefined) out.cwd = parent.cwd;
   if (parent.config !== undefined) out.config = parent.config;
   return out;
+}
+
+interface BootstrapCtx {
+  cwd: string;
+  jsonMode: boolean;
+  ralph: boolean;
+}
+
+/**
+ * Free-form bootstrap: render a draft via `conductor draft`, hand off to the
+ * adapter so the user can post it to Jira, and wait for the returned issue
+ * key. Keeps the "draft never auto-creates" invariant — adapter/user decide
+ * when to run acli.
+ *
+ * TTY (non-JSON) mode is intentionally not supported: prompting a human to
+ * create a Jira issue mid-command and type the key back is fragile. Users
+ * should run `conductor draft` directly in that case.
+ */
+async function bootstrapFromFreeform(
+  description: string,
+  parent: AnyArgs,
+  ctx: BootstrapCtx,
+): Promise<string> {
+  if (!ctx.jsonMode) {
+    throw new Error(
+      `Free-form autopilot requires --json (the draft-post signal needs a JSON adapter). ` +
+        `For TTY use, run \`conductor draft "${description.slice(0, 40)}..."\` first, then \`conductor autopilot <KEY>\`.`,
+    );
+  }
+
+  await draftCommand.run!({
+    args: {
+      ...passThroughGlobals(parent),
+      json: ctx.jsonMode,
+      auto: Boolean(parent.auto) || ctx.ralph,
+      yes: Boolean(parent.yes),
+      description,
+      type: parent.type ?? 'Task',
+    },
+    rawArgs: [],
+    cmd: draftCommand,
+    data: undefined,
+    subCommand: undefined,
+  } as unknown as Parameters<NonNullable<typeof draftCommand.run>>[0]);
+
+  emitSignal('draft-post', {
+    hint:
+      'Draft rendered (see preceding draft/complete handoff). Post the issue via acli ' +
+      'or Jira UI, then reply {"id":"draft-posted","issue_key":"<KEY>"} on stdin.',
+  });
+  const ack = await awaitAck('draft-posted');
+  const issueKey = typeof ack.issue_key === 'string' ? ack.issue_key : '';
+  if (!isIssueKey(issueKey)) {
+    throw new Error(
+      `draft-posted ack did not include a valid issue_key (got "${issueKey}"). Aborting.`,
+    );
+  }
+  return issueKey;
 }

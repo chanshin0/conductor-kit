@@ -16,10 +16,10 @@ function run(args: Record<string, unknown>): Promise<unknown> {
 }
 
 describe('autopilot arg validation', () => {
-  it('rejects a non-issue-key positional (free-form prompt is v2)', async () => {
+  it('rejects free-form prompt without --json (signal protocol requires JSON adapter)', async () => {
     await expect(
-      run({ key: 'fix the thing', json: true }),
-    ).rejects.toThrow(/Free-form prompt is not supported/);
+      run({ key: 'fix the thing', json: false }),
+    ).rejects.toThrow(/Free-form autopilot requires --json/);
   });
 
   it('rejects --ralph without --json (signal protocol needs JSON stdin)', async () => {
@@ -35,10 +35,10 @@ describe('autopilot arg validation', () => {
   });
 
   it('accepts an issue key with numeric project prefix (e.g. A1-5)', async () => {
-    // We still expect a downstream error (no config/jira in test env), but
-    // it must not be the pattern check.
+    // Downstream errors (missing config/jira) are expected in this env, but
+    // the pattern guard must not fire.
     await expect(
       run({ key: 'A1-5', json: true, 'stop-at': 'pick' }),
-    ).rejects.not.toThrow(/Free-form prompt is not supported/);
+    ).rejects.not.toThrow(/Free-form autopilot requires --json/);
   });
 });
