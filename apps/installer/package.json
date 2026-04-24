@@ -1,6 +1,6 @@
 {
   "name": "@conductor-kit/install",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Install conductor-kit agent adapters (Claude / Codex / Cursor) into a host repository.",
   "license": "MIT",
   "author": "Dongchan Shin <dong2chan3a@gmail.com>",

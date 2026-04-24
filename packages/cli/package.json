@@ -1,6 +1,6 @@
 {
   "name": "@conductor-kit/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The `conductor` command — a neutral CLI that drives team workflow automation across multiple AI agents.",
   "license": "MIT",
   "author": "Dongchan Shin <dong2chan3a@gmail.com>",
