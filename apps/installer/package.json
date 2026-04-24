@@ -1,5 +1,5 @@
 {
-  "name": "conductor-install",
+  "name": "@conductor-kit/install",
   "version": "0.1.0",
   "description": "Install conductor-kit agent adapters (Claude / Codex / Cursor) into a host repository.",
   "license": "MIT",

@@ -1,4 +1,4 @@
-# conductor-install
+# @conductor-kit/install
 
 ## 0.1.0
 
@@ -19,7 +19,7 @@
   - `@conductor-kit/assets` carries neutral workflow templates, seeds, and
     references. All company-specific placeholders replaced with generic
     `<YOUR_PROJECT_KEY>` / `<YOUR_JIRA_BASE_URL>` forms.
-  - `conductor-install` is the host-side installer: `npx conductor-install
+  - `@conductor-kit/install` is the host-side installer: `npx @conductor-kit/install
 --agent <claude|codex|cursor|all>` copies the matching adapter (slash
     commands, rules, or `AGENTS.md` fragment with idempotent marker-based
     merge) into the host repo plus seeds `.conductor/workflow.yml`. The
@@ -27,7 +27,7 @@
 
   Agent adapter packages (`agent-claude`, `agent-codex`, `agent-cursor`)
   are intentionally not published — their files are distributed solely
-  through `conductor-install`.
+  through `@conductor-kit/install`.
 
 ### Patch Changes
 

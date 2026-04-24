@@ -8,18 +8,18 @@ seeds `.conductor/` with the default workflow config.
 
 ```bash
 # Install for one agent
-npx conductor-install --agent claude  --label "Claude Opus 4.7" --project-key ACME
-npx conductor-install --agent codex   --label "Codex GPT-5"      --project-key ACME
-npx conductor-install --agent cursor  --label "Cursor / Claude Sonnet 4.6" --project-key ACME
+npx @conductor-kit/install --agent claude  --label "Claude Opus 4.7" --project-key ACME
+npx @conductor-kit/install --agent codex   --label "Codex GPT-5"      --project-key ACME
+npx @conductor-kit/install --agent cursor  --label "Cursor / Claude Sonnet 4.6" --project-key ACME
 
 # Install for all three at once
-npx conductor-install --agent all --label "Claude Opus 4.7" --project-key ACME
+npx @conductor-kit/install --agent all --label "Claude Opus 4.7" --project-key ACME
 
 # Preview without writing anything
-npx conductor-install --agent all --dry-run
+npx @conductor-kit/install --agent all --dry-run
 
 # Overwrite existing adapter files (otherwise they are skipped)
-npx conductor-install --agent claude --force
+npx @conductor-kit/install --agent claude --force
 ```
 
 ## Flags

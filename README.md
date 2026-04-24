@@ -22,7 +22,7 @@ Teams that adopt multiple AI coding agents end up with fragmented workflows — 
 npm install -g @conductor-kit/cli
 
 # In any repo, pick your agent adapter
-npx conductor-install --agent claude   # or: --agent codex / --agent cursor / --agent all
+npx @conductor-kit/install --agent claude   # or: --agent codex / --agent cursor / --agent all
 
 # Drive a Jira issue end-to-end
 conductor init --project-key MYKEY
@@ -57,7 +57,7 @@ conductor-kit/
 ├── packages/agent-claude # Claude Code plugin (CLI-delegating)
 ├── packages/agent-codex  # Codex CLI bundle (AGENTS.md + prompts)
 ├── packages/agent-cursor # Cursor bundle (.cursor/rules + commands)
-└── apps/installer        # `npx conductor-install`
+└── apps/installer        # `npx @conductor-kit/install`
 ```
 
 See `docs/ARCHITECTURE.md` once it lands.
