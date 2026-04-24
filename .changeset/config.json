@@ -10,7 +10,6 @@
   "ignore": [
     "@conductor-kit/agent-claude",
     "@conductor-kit/agent-codex",
-    "@conductor-kit/agent-cursor",
-    "conductor-install"
+    "@conductor-kit/agent-cursor"
   ]
 }
