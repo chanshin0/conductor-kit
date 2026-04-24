@@ -48,3 +48,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # OIDC provenance: npm attaches a signed attestation tying this
+          # release to the workflow run. Requires `id-token: write` above and
+          # works alongside NPM_TOKEN. If a trusted publisher is configured
+          # for the package on npmjs.com, OIDC alone can replace NPM_TOKEN —
+          # see docs/RELEASE.md for the one-time setup.
+          NPM_CONFIG_PROVENANCE: 'true'
