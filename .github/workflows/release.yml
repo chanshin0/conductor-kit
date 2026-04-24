@@ -31,12 +31,12 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           cache: pnpm
 
-      # npm trusted-publishing via OIDC was added in npm v11.5.1. The version
-      # bundled with Node 22 is ~10.x, which fails ENEEDAUTH when NPM_TOKEN
-      # is unset even though OIDC would otherwise work. Upgrade globally so
-      # pnpm's underlying `npm publish` picks up the newer CLI.
-      - name: Upgrade npm (for trusted-publishing support)
-        run: npm install -g npm@latest
+      # npm trusted-publishing via OIDC landed in npm v11.5.1. Node 22 ships
+      # ~npm 10, which fails ENEEDAUTH when NPM_TOKEN is unset. `npm@latest`
+      # self-upgrade runs into a MODULE_NOT_FOUND on `promise-retry` on the
+      # tooled-cache Node; pin to a known-good release line instead.
+      - name: Install npm 11 (trusted-publishing support)
+        run: npm install -g npm@11
 
       - name: Install
         run: pnpm install --frozen-lockfile
