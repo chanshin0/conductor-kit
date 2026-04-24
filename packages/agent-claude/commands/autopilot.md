@@ -1,6 +1,6 @@
 ---
-description: 자율 운행 — pick → 구현 → ship 원샷 (다중 이슈 시 git worktree 병렬)
-argument-hint: "<ISSUE-KEY|\"desc\"> [--parallel] [--ralph]"
+description: 자율 운행 — pick → 구현 → ship 원샷 (단일), 여러 이슈 시 Task 병렬
+argument-hint: "<ISSUE-KEY|\"desc\"> [ISSUE-KEY ...] [--ralph]"
 ---
 
 # /conductor:autopilot
@@ -8,60 +8,124 @@ argument-hint: "<ISSUE-KEY|\"desc\"> [--parallel] [--ralph]"
 **Metaphor**: hand the conductor's baton to the system and let it run the
 whole set. The human steps in only when the score deviates.
 
-## Execute
+## Modes
+
+Parse `$ARGUMENTS`: extract tokens matching `^[A-Z][A-Z0-9]+-\d+$` as issue
+keys. Count = N.
+
+| N | Mode | How |
+|---|---|---|
+| 0 (free-form only) | Single — draft bootstrap | CLI renders draft + emits `draft-post` signal |
+| 1 | Single | Direct `conductor autopilot <KEY>` |
+| ≥ 2 | **Multi — Task parallel** | Spawn N subagents with `isolation: "worktree"` |
+
+## Single mode (N ≤ 1)
 
 ```bash
 conductor autopilot $ARGUMENTS --json --agent "Claude Code"
 ```
 
-CLI responsibilities (deterministic):
+CLI drives the deterministic parts; the agent handles `implement` via a
+signal/ack exchange on stdin/stdout.
 
-- Resolve the issue key (direct arg) or run `conductor draft` first
-  (free-form arg) then pick the created draft.
-- `conductor pick <KEY>` (with `--auto` if `--ralph` is set, otherwise the
-  agent approves after review).
-- Emit `{"type": "signal", "step": "implement", "plan": {...}, "conventions": {...}}`
-  — control handed to the agent.
-- After the agent emits `{"id": "implement-done"}`, run `conductor ship`.
-- If `--parallel` and multiple issues were passed, spin up `git worktree`
-  subprocesses, one per issue. Aggregate results at the end.
+### Signal/ack protocol
 
-## Adapter responsibilities (implement phase)
+The CLI emits one of two signals; reply on stdin with the matching ack.
 
-1. When the CLI emits `step: "implement"`, load the plan + conventions.
-2. Build the change following the plan's 구현 접근 section:
-   - Edit / Write as needed.
-   - Keep edits inside the plan's 영향 범위. If you need to go outside, pause
-     and surface a `deviation` question via `AskUserQuestion`.
-3. Run the basic validation loop (`pnpm run lint / type-check / test`) locally
-   to de-risk before ship.
-4. Echo `{"id": "implement-done"}` to the CLI's stdin so it proceeds to ship.
+| Signal | Payload | Your job | Ack to send |
+|---|---|---|---|
+| `{"type":"signal","step":"draft-post",...}` | hint text | Use acli (or tell the user) to post the draft to Jira; capture the returned key | `{"id":"draft-posted","issue_key":"<KEY>"}` |
+| `{"type":"signal","step":"implement",...}` | `issue_key`, `work_file` | Read the work file, implement per the plan, run local validation | `{"id":"implement-done"}` |
 
-With `--ralph`: auto-approve plans, auto-accept commit messages, auto-skip
-any question that has a "default" choice. Still surface `deviation` and UI
-verification failures — those always require human decision.
+Keep each exchange single-shot: one signal in, one ack out.
+
+### Implement-phase responsibilities
+
+1. Read the work file at the path the CLI gave you.
+2. Build the change following the plan's 구현 접근 section.
+   - Edit/Write as needed.
+   - Stay inside the plan's 영향 범위. If you must go outside, pause and
+     surface a deviation question via `AskUserQuestion` before proceeding.
+3. Run the basic validation loop (`pnpm run lint / type-check / test`)
+   locally to de-risk before `ship` runs.
+4. Reply `{"id":"implement-done"}` on stdin.
+
+With `--ralph`: the CLI promotes `--auto`, so plan-approval and
+commit-message gates are skipped. Deviation, UI-verify failures, and
+validation failures still halt — they always need a human call.
+
+## Multi mode (N ≥ 2) — Task parallel
+
+The CLI has no native `--parallel` — coordinating multiple child CLIs over a
+single stdout is a non-starter. Instead, parallelize at this layer using
+**Task subagents with isolated worktrees**.
+
+Steps:
+
+1. **Pre-flight** (in the main session, before spawning):
+   - `git status --porcelain` must be empty. Otherwise stop and ask the user
+     to stash/commit — multi-mode won't run on a dirty tree.
+   - For each issue key, verify it exists via `acli jira workitem view <KEY>`.
+     Drop unreachable keys from the spawn set, report them in the final
+     summary.
+
+2. **Spawn N subagents in a single message** (parallel tool calls):
+
+   ```
+   Task(
+     subagent_type: "general-purpose",
+     description: "autopilot <KEY>",
+     isolation: "worktree",
+     prompt: |
+       Run `conductor autopilot <KEY> --ralph --json --agent "Claude Code"`
+       in this worktree. Follow the single-mode signal/ack protocol in
+       /conductor:autopilot. Grey-area policy: consult CONVENTIONS.md +
+       CLAUDE.md first, record the call in `.work/<KEY>.md`'s 결정 메모,
+       proceed; only fail if the tradeoff is genuinely ambiguous.
+       Lockfile rule: never commit pnpm-lock.yaml / package-lock.json /
+       yarn.lock unless dependencies were explicitly added/removed.
+       Stall rule: if any external process hangs > 90s with no progress,
+       abort with "<stage> stalled". Return one line:
+       `<KEY> | <status> | <MR url or reason> | <worktree path>`.
+   )
+   ```
+
+3. **Aggregate results** into a table:
+
+   ```
+   | 이슈 | 결과 | MR | 워크트리 |
+   |---|---|---|---|
+   | ... | ok / failed | ... | ... |
+   ```
+
+4. Worktrees are **not** auto-cleaned — the user decides when to remove them
+   with `git worktree remove <path>` after merge.
+
+Multi-mode implicitly runs every subagent with `--ralph` (single session
+can't serve N plan-approval gates). Safety gates (deviation, UI, validation,
+3-in-a-row failures) remain enforced per subagent.
 
 ## Guardrails
 
-- Autopilot is **not** a green light to bypass the plan-approval gate. If a
-  plan cannot be auto-approved (missing sections, grey-area questions with
-  no default), stop and surface them.
-- Never run `git push --force` / `git commit --amend` in autopilot.
-- If UI verification (Phase 1.5) fails, halt and wait for the user — do not
-  self-retry.
+- Plan-approval gate is not something `--ralph` negotiates away per issue —
+  if a plan is missing sections or has unresolved grey areas with no default,
+  stop and surface them before implement.
+- Never run `git push --force` / `git commit --amend` inside autopilot.
+- UI verification (Phase 1.5) failure halts — do not self-retry.
+- In multi-mode, a subagent that stalls or hits the 3-failure safety cap
+  fails out of the batch; it does not block the others.
 
 ## Handoff
 
-Per issue:
+Single mode (per issue) — the CLI emits:
 
 ```json
-{"status": "ok", "phase": "autopilot/issue-complete",
- "data": {"issue_key": "...", "mr_url": "..."}}
+{"status":"ok","phase":"ship/complete",
+ "data":{"issue_key":"...","mr_url":"..."}}
 ```
 
-Final aggregate (with `--parallel`):
+Multi mode — aggregate the per-subagent lines into the table above and
+append the follow-up hint:
 
-```json
-{"status": "ok", "phase": "autopilot/complete",
- "data": {"succeeded": [...], "failed": [...]}}
-```
+> Next: review each MR → `/conductor:land <KEY>` → `/conductor:recap <KEY>`.
+> Clean worktrees with `git worktree remove <path>` after merge.

@@ -1,7 +1,8 @@
 # conductor:autopilot
 
-Unattended pick → implement → ship loop. One issue, or many issues in
-parallel (via `git worktree` subprocesses, CLI-driven).
+Unattended pick → implement → ship loop for a single Jira issue. Multi-issue
+batches run sequentially in Codex (no worktree subagent primitive); for true
+parallelism, use the Claude Code adapter instead.
 
 ## Run
 
@@ -9,53 +10,68 @@ parallel (via `git worktree` subprocesses, CLI-driven).
 conductor autopilot $ARGUMENTS --json --agent "Codex"
 ```
 
+Positional:
+
+- `<ISSUE-KEY>` — go straight to pick.
+- `"<free-form description>"` — CLI renders a draft, emits a `draft-post`
+  signal, waits for you to post it and reply with the key.
+
 Flags:
 
-- `--parallel` — spin up one worktree per issue (issues passed as repeated
-  args or via stdin list).
-- `--ralph` — take the default on every prompt. Questions marked as
-  "always requires human" (plan deviation, UI verify fail) still pause.
+- `--ralph` — the CLI promotes `--auto`, so plan-approval and commit-message
+  gates are taken silently. Deviation / UI-verify / validation failures
+  still halt; they always need a human call.
 
-## Flow
+## Signal/ack protocol
 
-1. CLI runs `conductor pick <KEY>` (or drafts first if given a free-form
-   description).
-2. CLI emits `{"type": "signal", "step": "implement", "plan": {...},
-   "conventions": {...}}` — control handed to you.
-3. You implement the change:
+The CLI emits one of two signals on stdout. Reply on stdin with the matching
+ack — one signal in, one ack out.
+
+| Signal | Payload | Your job | Ack to send |
+|---|---|---|---|
+| `{"type":"signal","step":"draft-post",...}` | hint text | Post the draft to Jira via `acli` (or have the user do it); capture the returned key | `{"id":"draft-posted","issue_key":"<KEY>"}` |
+| `{"type":"signal","step":"implement",...}` | `issue_key`, `work_file` | Read the work file, implement per the plan, run local validation | `{"id":"implement-done"}` |
+
+## Implement-phase responsibilities
+
+1. Read the work file at the path the CLI gave you.
+2. Build the change following the plan's 구현 접근 section.
    - Edit/Write inside the plan's 영향 범위 only.
    - Run `pnpm run lint`, `pnpm run type-check`, related tests locally.
-   - If you need to edit outside the plan, surface a `deviation` question
-     and wait for the user's decision.
-4. When done, pipe back `{"id": "implement-done"}`.
-5. CLI runs `conductor ship` and emits the final handoff.
+   - If you must edit outside the plan, pause and ask the user before
+     proceeding — do not silently expand scope.
+3. Pipe back `{"id": "implement-done"}` on stdin.
+4. CLI runs `conductor ship` and emits the final handoff.
 
-## Adapter responsibilities
+## Multi-issue batches
 
-- Keep the plan and conventions loaded from the signal payload. Do not
-  re-read them from disk; they are already the merged view.
-- With `--ralph`, accept commit messages and skip non-critical questions
-  automatically — but **never** skip plan deviation or UI verify failures.
-- If the CLI reports per-issue failure in parallel mode, continue with the
-  remaining issues; do not abort the whole batch.
+Process them sequentially:
+
+```bash
+for KEY in $ARGUMENTS; do
+  conductor autopilot "$KEY" --ralph --json --agent "Codex"
+done
+```
+
+Keep a running summary: `<KEY> | <result> | <MR url or reason>`. Continue
+on per-issue failure; aggregate at the end. Batch mode implies `--ralph`.
+
+For concurrent worktree-based parallelism, use the Claude Code adapter —
+its Task/subagent/worktree primitive is what makes true parallel safe.
 
 ## Handoff (per issue)
 
-```json
-{"status": "ok", "phase": "autopilot/issue-complete",
- "data": {"issue_key": "...", "mr_url": "..."}}
-```
-
-## Handoff (batch)
+CLI emits on success:
 
 ```json
-{"status": "ok", "phase": "autopilot/complete",
- "data": {"succeeded": [...], "failed": [...]}}
+{"status":"ok","phase":"ship/complete",
+ "data":{"issue_key":"...","mr_url":"..."}}
 ```
 
 ## Guardrails
 
-- Autopilot does not bypass the plan-approval gate. If the plan can't be
-  auto-approved (missing sections, unresolved grey-area questions),
-  autopilot stops and waits.
+- Autopilot does not bypass the plan-approval gate. If the plan is missing
+  sections or has unresolved grey-area questions with no default, stop and
+  surface them before implement.
 - No `git push --force`, no `git commit --amend`, no `--no-verify`, ever.
+- UI verification failure halts; do not self-retry.
