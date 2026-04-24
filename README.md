@@ -1,14 +1,14 @@
 # conductor-kit
 
 > Team workflow automation that conducts multiple AI agents — Claude Code, Codex CLI, and Cursor — through a single shared ritual.
->
-> 여러 AI 에이전트(Claude Code · Codex CLI · Cursor)를 하나의 팀 워크플로우로 지휘하는 멀티 에이전트 오케스트레이션 킷.
+
+🇰🇷 [한국어 버전](./README.ko.md)
 
 **Status**: 🚧 Early development. API / CLI names may change before `v0.1.0`.
 
 ## Why
 
-Teams that adopt multiple AI coding agents end up with fragmented workflows — same Jira issue handled by Claude on one branch, Cursor on another, Codex CLI in a third terminal, each with its own prompts, conventions, and shell scripts. `conductor-kit` extracts the workflow itself into a neutral CLI so the agent becomes interchangeable.
+Teams that adopt multiple AI coding agents end up with fragmented workflows — the same Jira issue is handled by Claude on one branch, Cursor on another, Codex CLI in a third terminal, each with its own prompts, conventions, and shell scripts. `conductor-kit` extracts the workflow itself into a neutral CLI so the agent becomes interchangeable.
 
 - **Single CLI core** (`conductor`) handles Jira transitions, branch naming, GitLab MR creation, validation, and state files deterministically.
 - **Thin agent adapters** for Claude Code, Codex CLI, and Cursor call into the CLI via a stdin JSON protocol — no duplicated prompts.
