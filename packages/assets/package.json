@@ -1,6 +1,6 @@
 {
   "name": "@conductor-kit/assets",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Static assets for conductor-kit: workflow templates, config defaults, and reference docs.",
   "license": "MIT",
   "author": "Dongchan Shin <dong2chan3a@gmail.com>",
